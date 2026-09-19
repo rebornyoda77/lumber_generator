@@ -64,12 +64,29 @@ Add-Ins folder:
 %APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\
 ```
 
-Symlink from your cloned repo (run in an **elevated** Command Prompt or
-PowerShell — creating symlinks on Windows requires admin rights or Developer
-Mode enabled):
+Symlink from your cloned repo. In **PowerShell**, `mklink` doesn't exist
+(it's a `cmd.exe` builtin) and `%APPDATA%` doesn't expand there either —
+use `New-Item` with `$env:APPDATA` instead:
+
+```powershell
+# Needs an elevated PowerShell, or Developer Mode enabled in Windows Settings
+New-Item -ItemType SymbolicLink -Path "$env:APPDATA\Autodesk\Autodesk Fusion 360\API\AddIns\LumberGenerator" -Target "C:\path\to\lumber_generator\LumberGenerator"
+
+# No admin/Developer Mode needed:
+New-Item -ItemType Junction -Path "$env:APPDATA\Autodesk\Autodesk Fusion 360\API\AddIns\LumberGenerator" -Target "C:\path\to\lumber_generator\LumberGenerator"
+```
+
+If you're in `cmd.exe` instead of PowerShell, the original `mklink /D`
+syntax works there:
 
 ```cmd
-mklink /D "%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\LumberGenerator" "C:\path\to\fusion_add_on\LumberGenerator"
+mklink /D "%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\LumberGenerator" "C:\path\to\lumber_generator\LumberGenerator"
+```
+
+If none of that works for you, just copy the folder instead:
+
+```powershell
+Copy-Item -Recurse "C:\path\to\lumber_generator\LumberGenerator" "$env:APPDATA\Autodesk\Autodesk Fusion 360\API\AddIns\LumberGenerator"
 ```
 
 If you'd rather not deal with symlink permissions, just copy the
