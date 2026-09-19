@@ -127,7 +127,14 @@ def create_lumber_component(nominal_size: str, length_expression: str, length_in
         extrude_input.setDistanceExtent(
             False, adsk.core.ValueInput.createByString(length_expression)
         )
-        extrudes.add(extrude_input)
+        extrude = extrudes.add(extrude_input)
+
+        common.tag_component(
+            component,
+            kind="lumber",
+            nominalSize=nominal_size,
+            lengthParamName=extrude.extentOne.distance.name,
+        )
 
     # Stack repeats of the same size+length side by side along Y so they
     # don't render on top of each other.

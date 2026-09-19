@@ -21,6 +21,12 @@ IN_TO_CM = 2.54
 # repeats don't render exactly on top of each other.
 STACK_GAP_CM = IN_TO_CM
 
+# Attribute group used to tag every component this add-in creates with
+# enough info (kind + the model parameter names driving its size) for
+# sync_names_command to recompute its canonical name later, after the
+# user has edited any user parameters it's linked to.
+ATTR_GROUP = "LumberGenerator"
+
 
 def add_button(cmd_id, cmd_name, cmd_description, on_command_created, handlers):
     """Create (or reuse) a command definition and add it as a button on the
@@ -121,6 +127,24 @@ def add_dimensioned_rectangle(sketch, width_cm, length_cm, width_expression, len
         adsk.core.Point3D.create(width_cm + IN_TO_CM, length_cm / 2, 0),
     )
     length_dim.parameter.expression = length_expression
+
+    return width_dim, length_dim
+
+
+def tag_component(component, kind, **fields):
+    """Record this component's kind (e.g. "lumber", "plywood") and whatever
+    other string fields (nominal size, the names of the model parameters
+    driving its dimensions, etc.) it needs so sync_names_command can later
+    recompute its canonical name from current, live parameter values.
+    """
+    component.attributes.add(ATTR_GROUP, "kind", kind)
+    for key, value in fields.items():
+        component.attributes.add(ATTR_GROUP, key, str(value))
+
+
+def get_tag(component, key):
+    attr = component.attributes.itemByName(ATTR_GROUP, key)
+    return attr.value if attr else None
 
 
 def format_inches(value_in: float) -> str:

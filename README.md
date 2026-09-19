@@ -12,8 +12,8 @@ Fusion components.
 
 ## What it does
 
-- Adds **Create Lumber Stock** and **Create Plywood Panel** buttons to the
-  Solid workspace's Scripts and Add-Ins panel.
+- Adds **Create Lumber Stock**, **Create Plywood Panel**, and **Sync Board
+  Names** buttons to the Solid workspace's Scripts and Add-Ins panel.
 - **Create Lumber Stock** opens a dialog with:
   - A dropdown of standard nominal sizes: `2x4`, `2x6`, `2x8`, `2x10`,
     `2x12`, `4x4`, `1x2`, `1x4`, `1x6`, `1x8`.
@@ -47,13 +47,28 @@ than fixed geometry.
 
 The generated component's *name* is still a snapshot of the resolved size
 at creation time (e.g. `2x4_32in`), so it won't relabel itself if you
-change the parameter afterward - only the geometry updates.
+change the parameter afterward - only the geometry updates. Once you've
+finalized your parameters, use **Sync Board Names** (below) to catch the
+names up.
 
 The nominal-to-actual lookup tables live in
 [`LumberGenerator/commands/lumber_sizes.py`](LumberGenerator/commands/lumber_sizes.py)
 and
 [`LumberGenerator/commands/plywood_sizes.py`](LumberGenerator/commands/plywood_sizes.py)
 as plain dicts, so adding more sizes/thicknesses later is a one-line change.
+
+## Syncing names after changing parameters
+
+Both create commands tag every component they create with the model
+parameter(s) driving its size. **Sync Board Names** reads those live
+parameter values and renames each component to match - run it any time
+after editing user parameters, before generating a cut list, to make sure
+names reflect the final dimensions.
+
+It's an instant action (no dialog) - click it and it reports a summary of
+what it renamed. If two components would end up wanting the same name
+(e.g. two different boards' parameters converge on the same final size),
+it skips renaming those and reports the conflict rather than merging them.
 
 ## Cut lists
 
@@ -102,6 +117,7 @@ LumberGenerator/
     lumber_sizes.py            # nominal -> actual dimension lookup table
     create_plywood_command.py  # dialog + geometry creation for plywood
     plywood_sizes.py           # nominal -> actual thickness lookup table
+    sync_names_command.py      # renames components to match live parameter values
 ```
 
 ## Installing in Fusion 360

@@ -149,7 +149,7 @@ def create_plywood_component(
 
     def build_component(component):
         sketch = component.sketches.add(component.xYConstructionPlane)
-        common.add_dimensioned_rectangle(
+        width_dim, length_dim = common.add_dimensioned_rectangle(
             sketch, width_cm, length_cm, width_expression, length_expression
         )
 
@@ -162,6 +162,14 @@ def create_plywood_component(
             False, adsk.core.ValueInput.createByReal(actual_thickness_cm)
         )
         extrudes.add(extrude_input)
+
+        common.tag_component(
+            component,
+            kind="plywood",
+            nominalThickness=nominal_thickness,
+            widthParamName=width_dim.parameter.name,
+            lengthParamName=length_dim.parameter.name,
+        )
 
     # Stack repeats of the same thickness+width+length along Z, like a
     # physical stack of sheets.
