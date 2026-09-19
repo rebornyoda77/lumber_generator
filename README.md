@@ -72,10 +72,19 @@ the assembly.
   axis for plywood (turns the sheet within its own plane).
 - **Local X**/**Local Y** are offered for anything else you need.
 
-To make this closer to a real hotkey workflow: right-click **Rotate
-Selected 90°** in the ADD-INS panel/dropdown and choose **Change Keyboard
-Shortcut...** to bind it to a key. Then it's select-a-board, press the
-key, done.
+To make this closer to a real hotkey workflow, bind it to a key via
+Fusion's central shortcut editor (not a per-button right-click, since our
+commands live inside the ADD-INS dropdown rather than as standalone
+toolbar buttons):
+
+1. Click the search bar at the top-center of the Fusion window and type
+   `keyboard shortcuts` - this opens Preferences directly to the Keyboard
+   Shortcuts pane. (If your version doesn't surface it there: hamburger/
+   profile icon -> **Preferences** -> **General** tab -> **Keyboard
+   Shortcuts**.)
+2. Search for **Rotate Selected 90°** by name and assign a key combo.
+
+Then it's select-a-board, press the key, done.
 
 ## Syncing names after changing parameters
 

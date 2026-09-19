@@ -14,8 +14,8 @@ face-normal axis, so rotating about it turns the sheet within its own
 plane. Local X/Y are also offered for anything that needs a different
 axis.
 
-Tip: assign this command a keyboard shortcut (right-click it in the
-ADD-INS panel/dropdown -> "Change Keyboard Shortcut...") so a
+Tip: assign this command a keyboard shortcut via Fusion's Preferences ->
+Keyboard Shortcuts editor (search for "Rotate Selected 90") so a
 select-then-hotkey habit replaces dragging the Move/Copy gizmo by hand.
 """
 
