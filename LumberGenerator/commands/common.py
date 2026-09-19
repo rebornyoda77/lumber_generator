@@ -13,7 +13,17 @@ app = adsk.core.Application.get()
 ui = app.userInterface
 
 TARGET_WORKSPACE_ID = "FusionSolidEnvironment"
-TARGET_PANEL_ID = "SolidScriptsAddinsPanel"
+
+# Commands live on their own dedicated toolbar panel, positioned right
+# after the built-in Scripts and Add-Ins panel, rather than being added
+# into that panel itself. That panel renders as a flyout dropdown, and
+# commands nested inside it don't get registered into the user's local UI
+# profile the same way a real toolbar panel's buttons do - which is what
+# Fusion's keyboard-shortcut editor ("...") reads from. A dedicated panel
+# gives each command its own always-visible button that supports it.
+ANCHOR_PANEL_ID = "SolidScriptsAddinsPanel"
+PANEL_ID = "lumberGeneratorPanel"
+PANEL_NAME = "Lumber Generator"
 
 IN_TO_CM = 2.54
 
@@ -28,10 +38,19 @@ STACK_GAP_CM = IN_TO_CM
 ATTR_GROUP = "LumberGenerator"
 
 
+def _get_or_create_panel():
+    workspace = ui.workspaces.itemById(TARGET_WORKSPACE_ID)
+    panel = workspace.toolbarPanels.itemById(PANEL_ID)
+    if not panel:
+        panel = workspace.toolbarPanels.add(PANEL_ID, PANEL_NAME, ANCHOR_PANEL_ID, False)
+    return panel
+
+
 def add_button(cmd_id, cmd_name, cmd_description, on_command_created, handlers):
-    """Create (or reuse) a command definition and add it as a button on the
-    Solid workspace's Scripts and Add-Ins panel. `handlers` is the calling
-    module's list to keep event handlers alive for the add-in's lifetime.
+    """Create (or reuse) a command definition and add it as a button on
+    LumberGenerator's own toolbar panel in the Solid workspace. `handlers`
+    is the calling module's list to keep event handlers alive for the
+    add-in's lifetime.
     """
     cmd_def = ui.commandDefinitions.itemById(cmd_id)
     if not cmd_def:
@@ -40,15 +59,16 @@ def add_button(cmd_id, cmd_name, cmd_description, on_command_created, handlers):
     cmd_def.commandCreated.add(on_command_created)
     handlers.append(on_command_created)
 
-    workspace = ui.workspaces.itemById(TARGET_WORKSPACE_ID)
-    panel = workspace.toolbarPanels.itemById(TARGET_PANEL_ID)
+    panel = _get_or_create_panel()
     if not panel.controls.itemById(cmd_id):
         panel.controls.addCommand(cmd_def)
 
 
 def remove_button(cmd_id):
     workspace = ui.workspaces.itemById(TARGET_WORKSPACE_ID)
-    panel = workspace.toolbarPanels.itemById(TARGET_PANEL_ID)
+    panel = workspace.toolbarPanels.itemById(PANEL_ID)
+    if not panel:
+        return
 
     control = panel.controls.itemById(cmd_id)
     if control:
@@ -57,6 +77,11 @@ def remove_button(cmd_id):
     cmd_def = ui.commandDefinitions.itemById(cmd_id)
     if cmd_def:
         cmd_def.deleteMe()
+
+    # Clean up the panel itself once nothing's left on it, so re-running
+    # start() later doesn't find a stale empty panel.
+    if panel.controls.count == 0:
+        panel.deleteMe()
 
 
 def add_grouped_occurrence(root_comp, component_name, stack_offset_cm, build_component):

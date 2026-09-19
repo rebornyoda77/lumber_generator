@@ -13,8 +13,10 @@ Fusion components.
 ## What it does
 
 - Adds **Create Lumber Stock**, **Create Plywood Panel**, **Rotate
-  Selected 90°**, and **Sync Board Names** buttons to the Solid
-  workspace's Scripts and Add-Ins panel.
+  Selected 90°**, and **Sync Board Names** as buttons on their own
+  **Lumber Generator** toolbar panel in the Solid workspace (positioned
+  right after the built-in Scripts and Add-Ins panel) - not nested inside
+  any dropdown, so each one is directly assignable a keyboard shortcut.
 - **Create Lumber Stock** opens a dialog with:
   - A dropdown of standard nominal sizes: `2x4`, `2x6`, `2x8`, `2x10`,
     `2x12`, `4x4`, `1x2`, `1x4`, `1x6`, `1x8`.
@@ -72,17 +74,16 @@ the assembly.
   axis for plywood (turns the sheet within its own plane).
 - **Local X**/**Local Y** are offered for anything else you need.
 
-To make this closer to a real hotkey workflow, bind it to a key via
-Fusion's central shortcut editor (not a per-button right-click, since our
-commands live inside the ADD-INS dropdown rather than as standalone
-toolbar buttons):
-
-1. Click the search bar at the top-center of the Fusion window and type
-   `keyboard shortcuts` - this opens Preferences directly to the Keyboard
-   Shortcuts pane. (If your version doesn't surface it there: hamburger/
-   profile icon -> **Preferences** -> **General** tab -> **Keyboard
-   Shortcuts**.)
-2. Search for **Rotate Selected 90°** by name and assign a key combo.
+To make this closer to a real hotkey workflow, bind it to a key: on the
+**Lumber Generator** toolbar panel, hover the **Rotate Selected 90°**
+button, click the **...** (three dots) that appears, and choose **Change
+Keyboard Shortcut...**. This only works because the command lives on its
+own real toolbar panel now - a command nested inside a dropdown/flyout
+(like the built-in Scripts and Add-Ins panel) doesn't get registered into
+the local UI profile Fusion's shortcut system reads from, so it never gets
+that "..." control. If Fusion's central Preferences -> Keyboard Shortcuts
+editor is easier for you, that works too - search for the command by name
+there.
 
 Then it's select-a-board, press the key, done.
 
@@ -219,10 +220,10 @@ re-copy it after making changes.
    and browse to the `LumberGenerator` folder directly.
 5. Select `LumberGenerator` and click **Run**. Optionally check **Run on
    Startup** if you want it to load automatically.
-6. Switch to the **Design** workspace, **Solid** tab, and open the
-   **ADD-INS** dropdown at the far right of the toolbar. You should see
-   **Create Lumber Stock** and **Create Plywood Panel** listed there
-   alongside "Scripts and Add-Ins..." and "Fusion App Store".
+6. Switch to the **Design** workspace, **Solid** tab. You should see a new
+   **Lumber Generator** panel in the toolbar (after the built-in Scripts
+   and Add-Ins panel) with four buttons: **Create Lumber Stock**, **Create
+   Plywood Panel**, **Rotate Selected 90°**, and **Sync Board Names**.
 7. Click **Create Lumber Stock**, pick a nominal size and length, and hit
    **OK**. A new component should appear in the browser tree, named like
    `2x4_36in`.

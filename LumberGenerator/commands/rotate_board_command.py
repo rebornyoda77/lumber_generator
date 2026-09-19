@@ -14,9 +14,11 @@ face-normal axis, so rotating about it turns the sheet within its own
 plane. Local X/Y are also offered for anything that needs a different
 axis.
 
-Tip: assign this command a keyboard shortcut via Fusion's Preferences ->
-Keyboard Shortcuts editor (search for "Rotate Selected 90") so a
-select-then-hotkey habit replaces dragging the Move/Copy gizmo by hand.
+Tip: this command lives on its own real toolbar panel (see common.py),
+not nested in a dropdown, so it can be assigned a keyboard shortcut -
+hover its button, click the "..." that appears, and choose "Change
+Keyboard Shortcut..." - for a select-then-hotkey habit instead of
+dragging the Move/Copy gizmo by hand.
 """
 
 import traceback
