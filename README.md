@@ -33,6 +33,22 @@ Fusion components.
     rectangular sketch sized to the width/length you specify, extruded to
     the panel's actual sanded thickness.
 
+## Using Fusion user parameters (variables)
+
+The length field (lumber) and width/length fields (plywood) accept Fusion's
+normal expression syntax, which includes referencing an existing
+**User Parameter** (`Modify -> Change Parameters -> User Parameters`) by
+name instead of a literal value. For example, if you've defined a user
+parameter `shelf_length = 32in`, typing `shelf_length` into the Length
+field links that board's extrude to the parameter - editing `shelf_length`
+later in Change Parameters resizes every board created from it. Same for
+plywood width/length, which are added as driving sketch dimensions rather
+than fixed geometry.
+
+The generated component's *name* is still a snapshot of the resolved size
+at creation time (e.g. `2x4_32in`), so it won't relabel itself if you
+change the parameter afterward - only the geometry updates.
+
 The nominal-to-actual lookup tables live in
 [`LumberGenerator/commands/lumber_sizes.py`](LumberGenerator/commands/lumber_sizes.py)
 and

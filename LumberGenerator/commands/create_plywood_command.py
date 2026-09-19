@@ -93,13 +93,27 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
             length_input = inputs.itemById(LENGTH_INPUT_ID)
 
             nominal_thickness = thickness_input.selectedItem.name
+            # .expression is the raw text the user typed (e.g. "24 in" or a
+            # user parameter name like "cabinet_width") - passed through to
+            # the sketch dimensions so the panel stays linked to a
+            # referenced parameter, instead of a fixed resolved value.
+            width_expression = width_input.expression
+            length_expression = length_input.expression
             # Internal database units are cm.
             width_cm = width_input.value
             length_cm = length_input.value
             width_in = width_cm / common.IN_TO_CM
             length_in = length_cm / common.IN_TO_CM
 
-            create_plywood_component(nominal_thickness, width_cm, length_cm, width_in, length_in)
+            create_plywood_component(
+                nominal_thickness,
+                width_expression,
+                length_expression,
+                width_cm,
+                length_cm,
+                width_in,
+                length_in,
+            )
         except Exception:
             ui.messageBox(f"Failed to create plywood component:\n{traceback.format_exc()}")
 
@@ -111,7 +125,13 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
 
 
 def create_plywood_component(
-    nominal_thickness: str, width_cm: float, length_cm: float, width_in: float, length_in: float
+    nominal_thickness: str,
+    width_expression: str,
+    length_expression: str,
+    width_cm: float,
+    length_cm: float,
+    width_in: float,
+    length_in: float,
 ):
     design = adsk.fusion.Design.cast(app.activeProduct)
     if not design:
@@ -129,9 +149,9 @@ def create_plywood_component(
 
     def build_component(component):
         sketch = component.sketches.add(component.xYConstructionPlane)
-        corner1 = adsk.core.Point3D.create(0, 0, 0)
-        corner2 = adsk.core.Point3D.create(width_cm, length_cm, 0)
-        sketch.sketchCurves.sketchLines.addTwoPointRectangle(corner1, corner2)
+        common.add_dimensioned_rectangle(
+            sketch, width_cm, length_cm, width_expression, length_expression
+        )
 
         profile = sketch.profiles.item(0)
         extrudes = component.features.extrudeFeatures

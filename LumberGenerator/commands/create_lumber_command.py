@@ -78,10 +78,15 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
             length_input = inputs.itemById(LENGTH_INPUT_ID)
 
             nominal_size = size_input.selectedItem.name
+            # .expression is the raw text the user typed (e.g. "36 in" or a
+            # user parameter name like "shelf_length") - passing this through
+            # to the extrude, instead of the resolved .value, is what keeps
+            # the model linked to a referenced parameter after creation.
+            length_expression = length_input.expression
             length_cm = length_input.value  # internal database units are cm
             length_in = length_cm / common.IN_TO_CM
 
-            create_lumber_component(nominal_size, length_cm, length_in)
+            create_lumber_component(nominal_size, length_expression, length_in)
         except Exception:
             ui.messageBox(f"Failed to create lumber component:\n{traceback.format_exc()}")
 
@@ -92,7 +97,7 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
         pass
 
 
-def create_lumber_component(nominal_size: str, length_cm: float, length_in: float):
+def create_lumber_component(nominal_size: str, length_expression: str, length_in: float):
     design = adsk.fusion.Design.cast(app.activeProduct)
     if not design:
         ui.messageBox("No active Fusion design. Open or create a design first.")
@@ -116,7 +121,12 @@ def create_lumber_component(nominal_size: str, length_cm: float, length_in: floa
         extrude_input = extrudes.createInput(
             profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
         )
-        extrude_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(length_cm))
+        # createByString (not createByReal) keeps the extrude's distance
+        # parameter linked to the expression - if it references a user
+        # parameter, editing that parameter later updates this board.
+        extrude_input.setDistanceExtent(
+            False, adsk.core.ValueInput.createByString(length_expression)
+        )
         extrudes.add(extrude_input)
 
     # Stack repeats of the same size+length side by side along Y so they
