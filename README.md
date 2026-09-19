@@ -1,35 +1,53 @@
 # LumberGenerator
 
-A Fusion 360 add-in that generates dimensional lumber stock as Fusion
-components. Pick a nominal size (e.g. `2x4`) and a length, and it creates a
-new component sized to the actual S4S dressed dimensions (e.g. `2x4` ->
-1.5in x 3.5in), extruded to the length you specify.
+A Fusion 360 add-in that generates dimensional lumber and plywood stock as
+Fusion components.
+
+- **Lumber**: pick a nominal size (e.g. `2x4`) and a length, and it creates
+  a component sized to the actual S4S dressed dimensions (e.g. `2x4` ->
+  1.5in x 3.5in), extruded to the length you specify.
+- **Plywood**: pick a nominal thickness (e.g. `3/4`) and a custom width +
+  length, and it creates a panel sized to the actual sanded thickness (e.g.
+  `3/4` -> 0.719in) with the width/length you specify.
 
 ## What it does
 
-- Adds a **Create Lumber Stock** button to the Solid workspace's
-  Scripts and Add-Ins panel.
-- Opens a dialog with:
+- Adds **Create Lumber Stock** and **Create Plywood Panel** buttons to the
+  Solid workspace's Scripts and Add-Ins panel.
+- **Create Lumber Stock** opens a dialog with:
   - A dropdown of standard nominal sizes: `2x4`, `2x6`, `2x8`, `2x10`,
     `2x12`, `4x4`, `1x2`, `1x4`, `1x6`, `1x8`.
   - A length field. It accepts Fusion's normal expression syntax, so you
     can type `36`, `36 in`, `3 ft`, or `8'`.
-- On execution, creates (or adds another occurrence of) a component in the
-  active design named descriptively (e.g. `2x4_36in`), containing a
-  rectangular sketch on the XY plane, sized to the actual dressed
-  dimensions for the chosen nominal size, extruded to the requested length.
+  - On execution, creates (or adds another occurrence of) a component
+    named descriptively (e.g. `2x4_36in`), containing a rectangular sketch
+    on the XY plane, sized to the actual dressed dimensions for the chosen
+    nominal size, extruded to the requested length.
+- **Create Plywood Panel** opens a dialog with:
+  - A dropdown of standard nominal thicknesses: `1/4`, `3/8`, `1/2`, `5/8`,
+    `3/4`.
+  - Width and length fields (default 48in x 96in, a full sheet), also
+    accepting expressions like `24"` or `2'`.
+  - On execution, creates (or adds another occurrence of) a component
+    named descriptively (e.g. `ply_3-4in_24inx48in`), containing a
+    rectangular sketch sized to the width/length you specify, extruded to
+    the panel's actual sanded thickness.
 
-The nominal-to-actual lookup table lives in
+The nominal-to-actual lookup tables live in
 [`LumberGenerator/commands/lumber_sizes.py`](LumberGenerator/commands/lumber_sizes.py)
-as a plain dict, so adding more sizes later is a one-line change.
+and
+[`LumberGenerator/commands/plywood_sizes.py`](LumberGenerator/commands/plywood_sizes.py)
+as plain dicts, so adding more sizes/thicknesses later is a one-line change.
 
 ## Cut lists
 
-Components are named `<nominal>_<length>` (e.g. `2x4_96in`). Every board
-with the same nominal size **and** length reuses the same underlying
-component — creating a second `2x4` at 96in doesn't make a new definition,
-it adds another occurrence of the existing `2x4_96in` component (offset so
-they don't render on top of each other).
+Lumber components are named `<nominal>_<length>` (e.g. `2x4_96in`);
+plywood components are named `ply_<thickness>_<width>x<length>` (e.g.
+`ply_3-4in_24inx48in`). Every piece with matching name-defining dimensions
+reuses the same underlying component — creating a second `2x4` at 96in
+doesn't make a new definition, it adds another occurrence of the existing
+`2x4_96in` component (offset so repeats don't render on top of each other:
+lumber stacks sideways, plywood stacks like a stack of sheets).
 
 This matters because Fusion's Bill of Materials / Parts List groups and
 counts by shared component, not by name text. To get an actual cut list
@@ -40,31 +58,34 @@ with quantities:
 2. Insert a base view of your model.
 3. Use **Table -> Parts List** (or **Table -> BOM**, depending on Fusion
    version) and select the view.
-4. Fusion inserts a table listing each unique `<nominal>_<length>`
-   component with an auto-computed **QTY** column — that's your cut list.
+4. Fusion inserts a table listing each unique component with an
+   auto-computed **QTY** column — that's your cut list.
 
 You can also get the same grouped counts without a drawing via
 **File -> Export -> Bill of Materials** (CSV) if your Fusion version
 exposes it, or by reading component names/quantities from
 **Manage -> Bill of Materials** if present in your workspace.
 
-Note: because repeats of the same size+length share one component
-definition, editing that component's sketch/extrude (e.g. to trim one
-board) changes every occurrence of that exact size+length. If you need to
-independently adjust one specific board later, right-click its occurrence
-in the browser and use **Break Link** (or **Save As New Component**) to
-detach it into its own definition first.
+Note: because repeats of the same size share one component definition,
+editing that component's sketch/extrude (e.g. to trim one board or panel)
+changes every occurrence of that exact size. If you need to independently
+adjust one specific piece later, right-click its occurrence in the browser
+and use **Break Link** (or **Save As New Component**) to detach it into
+its own definition first.
 
 ## Structure
 
 ```
 LumberGenerator/
-  LumberGenerator.py          # entry point (run/stop)
-  LumberGenerator.manifest    # add-in manifest
+  LumberGenerator.py           # entry point (run/stop)
+  LumberGenerator.manifest     # add-in manifest
   commands/
-    __init__.py               # registers all commands
-    create_lumber_command.py  # dialog + geometry creation for the command
-    lumber_sizes.py           # nominal -> actual dimension lookup table
+    __init__.py                # registers all commands
+    common.py                  # shared UI registration + grouped-component/cut-list helpers
+    create_lumber_command.py   # dialog + geometry creation for lumber
+    lumber_sizes.py            # nominal -> actual dimension lookup table
+    create_plywood_command.py  # dialog + geometry creation for plywood
+    plywood_sizes.py           # nominal -> actual thickness lookup table
 ```
 
 ## Installing in Fusion 360
@@ -136,11 +157,16 @@ re-copy it after making changes.
    and browse to the `LumberGenerator` folder directly.
 5. Select `LumberGenerator` and click **Run**. Optionally check **Run on
    Startup** if you want it to load automatically.
-6. Switch to the **Design** workspace, **Solid** tab. You should see a new
-   **Create Lumber Stock** button in the Scripts and Add-Ins panel (usually
-   at the far right of the toolbar).
-7. Click it, pick a nominal size and length, and hit **OK**. A new
-   component should appear in the browser tree, named like `2x4 - 36in`.
+6. Switch to the **Design** workspace, **Solid** tab, and open the
+   **ADD-INS** dropdown at the far right of the toolbar. You should see
+   **Create Lumber Stock** and **Create Plywood Panel** listed there
+   alongside "Scripts and Add-Ins..." and "Fusion App Store".
+7. Click **Create Lumber Stock**, pick a nominal size and length, and hit
+   **OK**. A new component should appear in the browser tree, named like
+   `2x4_36in`.
+8. Click **Create Plywood Panel**, pick a nominal thickness and a
+   width/length, and hit **OK**. A new component should appear named like
+   `ply_3-4in_24inx48in`.
 
 ### Iterating on changes
 

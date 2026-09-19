@@ -13,6 +13,7 @@ import traceback
 import adsk.core
 import adsk.fusion
 
+from . import common
 from .lumber_sizes import NOMINAL_SIZE_ORDER, get_actual_dimensions_in
 
 app = adsk.core.Application.get()
@@ -22,17 +23,8 @@ CMD_ID = "lumberGenerator_createLumberCmd"
 CMD_NAME = "Create Lumber Stock"
 CMD_DESCRIPTION = "Create a dimensional lumber component (S4S actual dimensions)"
 
-TARGET_WORKSPACE_ID = "FusionSolidEnvironment"
-TARGET_PANEL_ID = "SolidScriptsAddinsPanel"
-
 SIZE_INPUT_ID = "lumberGenerator_nominalSize"
 LENGTH_INPUT_ID = "lumberGenerator_length"
-
-IN_TO_CM = 2.54
-
-# Extra spacing between stacked occurrences of the same board so repeats
-# don't render exactly on top of each other.
-STACK_GAP_CM = IN_TO_CM
 
 # Handlers must be kept alive for the life of the add-in, otherwise Fusion
 # garbage-collects them and the callbacks silently stop firing.
@@ -40,34 +32,12 @@ _handlers = []
 
 
 def start():
-    cmd_def = ui.commandDefinitions.itemById(CMD_ID)
-    if not cmd_def:
-        cmd_def = ui.commandDefinitions.addButtonDefinition(
-            CMD_ID, CMD_NAME, CMD_DESCRIPTION
-        )
-
     on_command_created = CommandCreatedHandler()
-    cmd_def.commandCreated.add(on_command_created)
-    _handlers.append(on_command_created)
-
-    workspace = ui.workspaces.itemById(TARGET_WORKSPACE_ID)
-    panel = workspace.toolbarPanels.itemById(TARGET_PANEL_ID)
-    if not panel.controls.itemById(CMD_ID):
-        panel.controls.addCommand(cmd_def)
+    common.add_button(CMD_ID, CMD_NAME, CMD_DESCRIPTION, on_command_created, _handlers)
 
 
 def stop():
-    workspace = ui.workspaces.itemById(TARGET_WORKSPACE_ID)
-    panel = workspace.toolbarPanels.itemById(TARGET_PANEL_ID)
-
-    control = panel.controls.itemById(CMD_ID)
-    if control:
-        control.deleteMe()
-
-    cmd_def = ui.commandDefinitions.itemById(CMD_ID)
-    if cmd_def:
-        cmd_def.deleteMe()
-
+    common.remove_button(CMD_ID)
     _handlers.clear()
 
 
@@ -109,7 +79,7 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
 
             nominal_size = size_input.selectedItem.name
             length_cm = length_input.value  # internal database units are cm
-            length_in = length_cm / IN_TO_CM
+            length_in = length_cm / common.IN_TO_CM
 
             create_lumber_component(nominal_size, length_cm, length_in)
         except Exception:
@@ -129,50 +99,27 @@ def create_lumber_component(nominal_size: str, length_cm: float, length_in: floa
         return
 
     thickness_in, width_in = get_actual_dimensions_in(nominal_size)
-    thickness_cm = thickness_in * IN_TO_CM
-    width_cm = width_in * IN_TO_CM
+    thickness_cm = thickness_in * common.IN_TO_CM
+    width_cm = width_in * common.IN_TO_CM
 
     root_comp = design.rootComponent
-    component_name = f"{nominal_size}_{format_length_in(length_in)}"
+    component_name = f"{nominal_size}_{common.format_inches(length_in)}"
 
-    # Every board of the same nominal size + length reuses one component
-    # definition (as additional occurrences), rather than each becoming its
-    # own unique component. Fusion's Parts List/BOM (in a Drawing) groups
-    # occurrences by their shared component and auto-computes a QTY column,
-    # so this is what lets the cut list count boards per size automatically.
-    existing_component = None
-    match_count = 0
-    for occurrence in root_comp.occurrences:
-        if occurrence.component.name == component_name:
-            existing_component = occurrence.component
-            match_count += 1
+    def build_component(component):
+        sketch = component.sketches.add(component.xYConstructionPlane)
+        corner1 = adsk.core.Point3D.create(0, 0, 0)
+        corner2 = adsk.core.Point3D.create(width_cm, thickness_cm, 0)
+        sketch.sketchCurves.sketchLines.addTwoPointRectangle(corner1, corner2)
 
-    placement = adsk.core.Matrix3D.create()
-    placement.translation = adsk.core.Vector3D.create(0, match_count * (width_cm + STACK_GAP_CM), 0)
+        profile = sketch.profiles.item(0)
+        extrudes = component.features.extrudeFeatures
+        extrude_input = extrudes.createInput(
+            profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
+        )
+        extrude_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(length_cm))
+        extrudes.add(extrude_input)
 
-    if existing_component:
-        root_comp.occurrences.addExistingComponent(existing_component, placement)
-        return
-
-    occurrence = root_comp.occurrences.addNewComponent(placement)
-    component = occurrence.component
-    component.name = component_name
-
-    sketch = component.sketches.add(component.xYConstructionPlane)
-    corner1 = adsk.core.Point3D.create(0, 0, 0)
-    corner2 = adsk.core.Point3D.create(width_cm, thickness_cm, 0)
-    sketch.sketchCurves.sketchLines.addTwoPointRectangle(corner1, corner2)
-
-    profile = sketch.profiles.item(0)
-    extrudes = component.features.extrudeFeatures
-    extrude_input = extrudes.createInput(
-        profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
-    )
-    extrude_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(length_cm))
-    extrudes.add(extrude_input)
-
-
-def format_length_in(length_in: float) -> str:
-    if length_in == int(length_in):
-        return f"{int(length_in)}in"
-    return f"{length_in:.2f}in"
+    # Stack repeats of the same size+length side by side along Y so they
+    # don't render on top of each other.
+    stack_offset_cm = (0, width_cm + common.STACK_GAP_CM, 0)
+    common.add_grouped_occurrence(root_comp, component_name, stack_offset_cm, build_component)
