@@ -28,6 +28,12 @@ LENGTH_INPUT_ID = "lumberGenerator_length"
 
 IN_TO_CM = 2.54
 
+# Persistent per-document item-number counter, stored as a Fusion attribute
+# so it survives save/reload and keeps handing out unique numbers for a
+# cut list even across add-in restarts.
+ITEM_COUNTER_GROUP = "LumberGenerator"
+ITEM_COUNTER_NAME = "nextItemNumber"
+
 # Handlers must be kept alive for the life of the add-in, otherwise Fusion
 # garbage-collects them and the callbacks silently stop firing.
 _handlers = []
@@ -127,9 +133,15 @@ def create_lumber_component(nominal_size: str, length_cm: float, length_in: floa
     width_cm = width_in * IN_TO_CM
 
     root_comp = design.rootComponent
+    item_number = get_next_item_number(root_comp)
+
     occurrence = root_comp.occurrences.addNewComponent(adsk.core.Matrix3D.create())
     component = occurrence.component
-    component.name = f"{nominal_size} - {format_length_in(length_in)}"
+    actual_dims = f"{format_dimension(thickness_in)}x{format_dimension(width_in)}"
+    component.name = (
+        f"#{item_number:03d} - {nominal_size} ({actual_dims} actual) "
+        f"x {format_length_in(length_in)}"
+    )
 
     sketch = component.sketches.add(component.xYConstructionPlane)
     corner1 = adsk.core.Point3D.create(0, 0, 0)
@@ -149,3 +161,16 @@ def format_length_in(length_in: float) -> str:
     if length_in == int(length_in):
         return f"{int(length_in)}in"
     return f"{length_in:.2f}in"
+
+
+def format_dimension(dimension_in: float) -> str:
+    if dimension_in == int(dimension_in):
+        return f"{int(dimension_in)}"
+    return f"{dimension_in:g}"
+
+
+def get_next_item_number(root_comp: adsk.fusion.Component) -> int:
+    attr = root_comp.attributes.itemByName(ITEM_COUNTER_GROUP, ITEM_COUNTER_NAME)
+    item_number = int(attr.value) if attr else 1
+    root_comp.attributes.add(ITEM_COUNTER_GROUP, ITEM_COUNTER_NAME, str(item_number + 1))
+    return item_number
