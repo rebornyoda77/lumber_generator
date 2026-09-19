@@ -1,9 +1,11 @@
 """Command: create a dimensional lumber component.
 
 Adds a button that opens a dialog to pick a nominal lumber size and a
-length, then builds a new component with a rectangular sketch on the XY
-plane extruded to the requested length, sized to the actual (S4S dressed)
-dimensions for that nominal size.
+length, then builds (or adds another occurrence of) a component with a
+rectangular sketch on the XY plane extruded to the requested length, sized
+to the actual (S4S dressed) dimensions for that nominal size. Boards with
+the same nominal size + length share one component definition so Fusion's
+Parts List/BOM can auto-count quantity per size (see README "Cut lists").
 """
 
 import traceback
@@ -28,11 +30,9 @@ LENGTH_INPUT_ID = "lumberGenerator_length"
 
 IN_TO_CM = 2.54
 
-# Persistent per-document item-number counter, stored as a Fusion attribute
-# so it survives save/reload and keeps handing out unique numbers for a
-# cut list even across add-in restarts.
-ITEM_COUNTER_GROUP = "LumberGenerator"
-ITEM_COUNTER_NAME = "nextItemNumber"
+# Extra spacing between stacked occurrences of the same board so repeats
+# don't render exactly on top of each other.
+STACK_GAP_CM = IN_TO_CM
 
 # Handlers must be kept alive for the life of the add-in, otherwise Fusion
 # garbage-collects them and the callbacks silently stop firing.
@@ -133,15 +133,30 @@ def create_lumber_component(nominal_size: str, length_cm: float, length_in: floa
     width_cm = width_in * IN_TO_CM
 
     root_comp = design.rootComponent
-    item_number = get_next_item_number(root_comp)
+    component_name = f"{nominal_size}_{format_length_in(length_in)}"
 
-    occurrence = root_comp.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+    # Every board of the same nominal size + length reuses one component
+    # definition (as additional occurrences), rather than each becoming its
+    # own unique component. Fusion's Parts List/BOM (in a Drawing) groups
+    # occurrences by their shared component and auto-computes a QTY column,
+    # so this is what lets the cut list count boards per size automatically.
+    existing_component = None
+    match_count = 0
+    for occurrence in root_comp.occurrences:
+        if occurrence.component.name == component_name:
+            existing_component = occurrence.component
+            match_count += 1
+
+    placement = adsk.core.Matrix3D.create()
+    placement.translation = adsk.core.Vector3D.create(0, match_count * (width_cm + STACK_GAP_CM), 0)
+
+    if existing_component:
+        root_comp.occurrences.addExistingComponent(existing_component, placement)
+        return
+
+    occurrence = root_comp.occurrences.addNewComponent(placement)
     component = occurrence.component
-    actual_dims = f"{format_dimension(thickness_in)}x{format_dimension(width_in)}"
-    component.name = (
-        f"#{item_number:03d} - {nominal_size} ({actual_dims} actual) "
-        f"x {format_length_in(length_in)}"
-    )
+    component.name = component_name
 
     sketch = component.sketches.add(component.xYConstructionPlane)
     corner1 = adsk.core.Point3D.create(0, 0, 0)
@@ -161,16 +176,3 @@ def format_length_in(length_in: float) -> str:
     if length_in == int(length_in):
         return f"{int(length_in)}in"
     return f"{length_in:.2f}in"
-
-
-def format_dimension(dimension_in: float) -> str:
-    if dimension_in == int(dimension_in):
-        return f"{int(dimension_in)}"
-    return f"{dimension_in:g}"
-
-
-def get_next_item_number(root_comp: adsk.fusion.Component) -> int:
-    attr = root_comp.attributes.itemByName(ITEM_COUNTER_GROUP, ITEM_COUNTER_NAME)
-    item_number = int(attr.value) if attr else 1
-    root_comp.attributes.add(ITEM_COUNTER_GROUP, ITEM_COUNTER_NAME, str(item_number + 1))
-    return item_number

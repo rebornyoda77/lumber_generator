@@ -14,14 +14,46 @@ new component sized to the actual S4S dressed dimensions (e.g. `2x4` ->
     `2x12`, `4x4`, `1x2`, `1x4`, `1x6`, `1x8`.
   - A length field. It accepts Fusion's normal expression syntax, so you
     can type `36`, `36 in`, `3 ft`, or `8'`.
-- On execution, creates a new component in the active design named
-  descriptively (e.g. `2x4 - 36in`), containing a rectangular sketch on the
-  XY plane, sized to the actual dressed dimensions for the chosen nominal
-  size, extruded to the requested length.
+- On execution, creates (or adds another occurrence of) a component in the
+  active design named descriptively (e.g. `2x4_36in`), containing a
+  rectangular sketch on the XY plane, sized to the actual dressed
+  dimensions for the chosen nominal size, extruded to the requested length.
 
 The nominal-to-actual lookup table lives in
 [`LumberGenerator/commands/lumber_sizes.py`](LumberGenerator/commands/lumber_sizes.py)
 as a plain dict, so adding more sizes later is a one-line change.
+
+## Cut lists
+
+Components are named `<nominal>_<length>` (e.g. `2x4_96in`). Every board
+with the same nominal size **and** length reuses the same underlying
+component — creating a second `2x4` at 96in doesn't make a new definition,
+it adds another occurrence of the existing `2x4_96in` component (offset so
+they don't render on top of each other).
+
+This matters because Fusion's Bill of Materials / Parts List groups and
+counts by shared component, not by name text. To get an actual cut list
+with quantities:
+
+1. Create a **Drawing** from your design (**File -> New Drawing**, or from
+   the Design workspace toolbar).
+2. Insert a base view of your model.
+3. Use **Table -> Parts List** (or **Table -> BOM**, depending on Fusion
+   version) and select the view.
+4. Fusion inserts a table listing each unique `<nominal>_<length>`
+   component with an auto-computed **QTY** column — that's your cut list.
+
+You can also get the same grouped counts without a drawing via
+**File -> Export -> Bill of Materials** (CSV) if your Fusion version
+exposes it, or by reading component names/quantities from
+**Manage -> Bill of Materials** if present in your workspace.
+
+Note: because repeats of the same size+length share one component
+definition, editing that component's sketch/extrude (e.g. to trim one
+board) changes every occurrence of that exact size+length. If you need to
+independently adjust one specific board later, right-click its occurrence
+in the browser and use **Break Link** (or **Save As New Component**) to
+detach it into its own definition first.
 
 ## Structure
 
