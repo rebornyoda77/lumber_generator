@@ -147,6 +147,31 @@ def get_tag(component, key):
     return attr.value if attr else None
 
 
+def rotate_occurrence_in_place(occurrence, local_axis, angle_rad):
+    """Rotate an occurrence by angle_rad about one of its own local axes
+    (local_axis is an (x, y, z) tuple, e.g. (0, 0, 1) for local Z), keeping
+    its origin fixed - i.e. spin the board/panel in place rather than
+    swinging it around the assembly origin.
+    """
+    old_transform = occurrence.transform
+    pivot = adsk.core.Point3D.create(
+        old_transform.translation.x, old_transform.translation.y, old_transform.translation.z
+    )
+
+    # A vector (unlike a point) ignores translation when transformed, so
+    # this correctly carries the local axis direction into parent space
+    # even though the occurrence may already be rotated/positioned.
+    axis_in_parent_space = adsk.core.Vector3D.create(*local_axis)
+    axis_in_parent_space.transformBy(old_transform)
+
+    rotation = adsk.core.Matrix3D.create()
+    rotation.setToRotation(angle_rad, axis_in_parent_space, pivot)
+
+    new_transform = old_transform.copy()
+    new_transform.transformBy(rotation)
+    occurrence.transform = new_transform
+
+
 def format_inches(value_in: float) -> str:
     if value_in == int(value_in):
         return f"{int(value_in)}in"

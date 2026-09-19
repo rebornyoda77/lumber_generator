@@ -4,9 +4,19 @@ To add another command later, create a new module in this package with its
 own start()/stop() functions and wire it up here alongside create_lumber_command.
 """
 
-from . import create_lumber_command, create_plywood_command, sync_names_command
+from . import (
+    create_lumber_command,
+    create_plywood_command,
+    rotate_board_command,
+    sync_names_command,
+)
 
-_command_modules = [create_lumber_command, create_plywood_command, sync_names_command]
+_command_modules = [
+    create_lumber_command,
+    create_plywood_command,
+    rotate_board_command,
+    sync_names_command,
+]
 
 
 def start():

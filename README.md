@@ -12,8 +12,9 @@ Fusion components.
 
 ## What it does
 
-- Adds **Create Lumber Stock**, **Create Plywood Panel**, and **Sync Board
-  Names** buttons to the Solid workspace's Scripts and Add-Ins panel.
+- Adds **Create Lumber Stock**, **Create Plywood Panel**, **Rotate
+  Selected 90°**, and **Sync Board Names** buttons to the Solid
+  workspace's Scripts and Add-Ins panel.
 - **Create Lumber Stock** opens a dialog with:
   - A dropdown of standard nominal sizes: `2x4`, `2x6`, `2x8`, `2x10`,
     `2x12`, `4x4`, `1x2`, `1x4`, `1x6`, `1x8`.
@@ -56,6 +57,25 @@ The nominal-to-actual lookup tables live in
 and
 [`LumberGenerator/commands/plywood_sizes.py`](LumberGenerator/commands/plywood_sizes.py)
 as plain dicts, so adding more sizes/thicknesses later is a one-line change.
+
+## Rotating a board/panel
+
+Fusion doesn't have a real command-line for driving modeling actions, so
+**Rotate Selected 90°** is the fast alternative to dragging the Move/Copy
+gizmo by hand: select one or more boards/panels, pick an axis, type an
+angle (defaults to 90deg, but accepts any expression), hit OK. Each
+selection is rotated about its own local origin in place, not swung around
+the assembly.
+
+- **Local Z** (the default) is the board's/panel's length axis for lumber
+  (flips it between lying flat and standing on edge) or the face-normal
+  axis for plywood (turns the sheet within its own plane).
+- **Local X**/**Local Y** are offered for anything else you need.
+
+To make this closer to a real hotkey workflow: right-click **Rotate
+Selected 90°** in the ADD-INS panel/dropdown and choose **Change Keyboard
+Shortcut...** to bind it to a key. Then it's select-a-board, press the
+key, done.
 
 ## Syncing names after changing parameters
 
@@ -117,6 +137,7 @@ LumberGenerator/
     lumber_sizes.py            # nominal -> actual dimension lookup table
     create_plywood_command.py  # dialog + geometry creation for plywood
     plywood_sizes.py           # nominal -> actual thickness lookup table
+    rotate_board_command.py    # rotate selected occurrence(s) in place
     sync_names_command.py      # renames components to match live parameter values
 ```
 
