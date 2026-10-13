@@ -238,3 +238,8 @@ the dialog every time — with **Run on Startup** unchecked, just select
 `LumberGenerator` in the Add-Ins list and click **Stop**, then **Run** again
 to pick up the changes. If Fusion's Python editor is open, its built-in
 "Run" (green triangle) with the add-in file selected also works.
+
+## Contributing
+
+Pull requests are welcome. Keep changes focused and include a short
+description of what changed and why in the PR body.
